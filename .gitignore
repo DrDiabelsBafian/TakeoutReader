@@ -1,0 +1,4 @@
+﻿build_nuitka/
+__pycache__/
+*.pyc
+*.zip
