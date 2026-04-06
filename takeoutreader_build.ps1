@@ -129,7 +129,7 @@ if ($Nuitka) {
         "-m", "nuitka"
         "--standalone"
         "--enable-plugin=tk-inter"
-        "--include-module=takeoutreader_core"
+        "--include-package=takeoutreader"
         "--output-dir=build_nuitka"
         "--remove-output"
         "--assume-yes-for-downloads"
