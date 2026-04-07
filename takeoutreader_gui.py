@@ -1,11 +1,11 @@
-# ============================================
+﻿# ============================================
 # takeoutreader_gui.py -- GUI v9 (Dark Violet + Matrix Deco)
 # CustomTkinter | Dark + Violet/Teal accents
 # Python 3.14 compatible | Deps: customtkinter, Pillow
 # ============================================
 # V9 -- Audit fixes + visual polish
 #   + Cream text palette (#F5F0E8) instead of cold lavender
-#   + Colored dots (CTkFrame 12x12) in badges — always render in color
+#   + Colored dots (CTkFrame 12x12) in badges â€” always render in color
 #   + Accent bar height=40 (DPI-safe)
 #   + Hover propagated to all card children
 #   + Dead code cleanup
@@ -271,7 +271,7 @@ class TakeoutReaderApp(ctk.CTk):
                      font=FONT_SUBTITLE, text_color=TEXT_MID
                      ).pack(anchor="w", pady=(1, 0))
 
-        # Badge pills (Pillow-drawn icons — always colored)
+        # Badge pills (Pillow-drawn icons â€” always colored)
         badge_row = ctk.CTkFrame(h_inner, fg_color="transparent")
         badge_row.pack(fill="x", pady=(8, 0))
         badge_icons = [
@@ -486,7 +486,7 @@ class TakeoutReaderApp(ctk.CTk):
                      font=FONT_CARD_DESC, text_color=TEXT_LO
                      ).pack(anchor="w", pady=(2, 0))
 
-        # Hover — propagated to ALL children (fix P3)
+        # Hover â€” propagated to ALL children (fix P3)
         def on_enter(e):
             card.configure(border_color=VIOLET_SOFT, fg_color=BG_ELEVATED)
 
@@ -582,38 +582,18 @@ class TakeoutReaderApp(ctk.CTk):
         threading.Thread(target=self._run_core, daemon=True).start()
 
     def _run_core(self):
-        base = get_base_dir()
-        core_path = os.path.join(base, "takeoutreader_core.py")
-        if not os.path.isfile(core_path):
-            self._log_queue.put(
-                "[ERREUR] takeoutreader_core.py introuvable dans : " + base
-            )
-            self._signal_done(False)
-            return
-
         old_stdout, old_stderr = sys.stdout, sys.stderr
         sys.stdout = QueueWriter(self._log_queue, old_stdout)
         sys.stderr = QueueWriter(self._log_queue, old_stderr)
         original_argv = original_input = None
-
         try:
             import builtins
             original_argv = sys.argv[:]
             original_input = builtins.input
-            sys.argv = (
-                [core_path] + self._selected_files
-                if self._selected_files
-                else [core_path]
-            )
+            sys.argv = ["takeoutreader"] + (self._selected_files or [])
             builtins.input = lambda *a, **kw: ""
-
-            import importlib.util
-            spec = importlib.util.spec_from_file_location(
-                "takeoutreader_core", core_path
-            )
-            core = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(core)
-            core.main()
+            from takeoutreader.__main__ import main
+            main()
             self._signal_done(True)
         except Exception as e:
             import traceback
@@ -627,7 +607,6 @@ class TakeoutReaderApp(ctk.CTk):
             if original_input is not None:
                 import builtins
                 builtins.input = original_input
-
     def _signal_done(self, ok):
         self._log_queue.put("__DONE_OK__" if ok else "__DONE_FAIL__")
 

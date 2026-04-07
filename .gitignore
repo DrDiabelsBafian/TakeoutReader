@@ -1,6 +1,36 @@
-﻿build_nuitka/
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Build artifacts
+build_nuitka/
+installer_output/
+*.spec
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+DIAG_*.log
+
+# Archives (don't commit the portable zip)
 *.zip
 
-DIAG_*.log
+# Test artifacts
+.pytest_cache/
+htmlcov/
+.coverage

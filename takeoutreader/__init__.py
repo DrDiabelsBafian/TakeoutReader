@@ -1,8 +1,9 @@
-# ============================================
-# TakeoutReader
-# .mbox / .eml / .zip -> HTML interactif standalone
-# Zero dependance, zero serveur, offline a vie
-# ============================================
+"""
+TakeoutReader — Gmail Takeout to offline HTML archive.
 
-__version__ = "1.0.0"
-__author__ = "Fabian"
+Converts .mbox / .zip / .eml exports into standalone, searchable HTML files.
+100% offline, zero telemetry.
+"""
+
+__version__ = "2.0.0"
+__author__ = "Dr. Diabels Bafian"

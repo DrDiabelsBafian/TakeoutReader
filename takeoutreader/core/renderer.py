@@ -1,24 +1,50 @@
-# ============================================
-# takeoutreader/core/renderer.py
-# Generation du dossier de sortie HTML
-# (index.html + mails.js + bodies.js + PJ)
-# ============================================
+"""
+HTML output generation.
+
+Produces the final archive: index.html (single-file app with embedded CSS/JS),
+mails.js (mail metadata), and bodies.js (full email bodies). The HTML is a
+standalone SPA that works offline in any modern browser — no build step, no
+bundler, no framework. Just open the file.
+
+The index.html template is large (~600 lines of inline HTML/CSS/JS). This is
+intentional: a single file is easier to distribute and doesn't break when
+users move it around their filesystem.
+"""
+
+from __future__ import annotations
 
 import os
 import json
 import html as html_mod
 from datetime import datetime
 from collections import Counter
+from typing import Any
 
 from takeoutreader.core.extractor import extract_pj_to_disk
 
-def generate_output(mails, output_dir):
-    """Cree un dossier avec index.html + mails.js + bodies.js.
-    Retourne la taille totale en Mo."""
+MailDict = dict[str, Any]
 
+
+def generate_output(mails: list[MailDict], output_dir: str) -> tuple[float, str]:
+    """Generate the complete HTML archive from parsed mail data.
+
+    Creates three files in ``output_dir``:
+    - ``index.html`` — standalone SPA with search, threads, categories
+    - ``mails.js`` — mail headers + snippets (loaded by index.html)
+    - ``bodies.js`` — full email bodies (lazy-loaded on click)
+
+    Also extracts attachments to ``output_dir/pj/``.
+
+    Args:
+        mails: List of parsed mail dicts from the parser.
+        output_dir: Target directory (created if it doesn't exist).
+
+    Returns:
+        Tuple of (total_size_mb, path_to_index_html).
+    """
     os.makedirs(output_dir, exist_ok=True)
 
-    all_labels = Counter()
+    all_labels: Counter[str] = Counter()
     for m in mails:
         for lb in m["labels"]:
             all_labels[lb] += 1
@@ -30,23 +56,23 @@ def generate_output(mails, output_dir):
     date_min = dates[-1][:4] if dates else "?"
     date_max = dates[0][:4] if dates else "?"
 
-    # === EXTRACT PJ TO DISK ===
-    print("  [PJ] Extraction des pieces jointes...", flush=True)
+    # --- Extract attachments to disk ---
+    print("  [PJ] Extracting attachments...", flush=True)
     extract_pj_to_disk(mails, output_dir)
 
-    # === MAILS.JS — headers + snippet, PAS de body ===
+    # --- mails.js: headers + snippets, no body (keeps file small) ---
     mails_light = []
     bodies = []
     for m in mails:
         light = {k: m[k] for k in ("ds", "d", "f", "ff", "to", "cc", "s",
                                      "labels", "l", "p", "pj", "cat", "tid", "sn",
                                      "spam", "trash", "sent")}
-        # Ajouter chemins PJ si extraites
         if "pjp" in m:
             light["pjp"] = m["pjp"]
         mails_light.append(light)
         bodies.append(m.get("b", ""))
 
+    # Escape < to prevent XSS via email content injected into JS
     mails_json = json.dumps(mails_light, ensure_ascii=True, separators=(',', ':'))
     mails_json = mails_json.replace("<", "\\u003C")
 
@@ -57,9 +83,9 @@ def generate_output(mails, output_dir):
         f.write(";\n")
 
     mails_size = os.path.getsize(mails_js_path) / (1024 * 1024)
-    print(f"    mails.js  : {mails_size:.1f} Mo ({nb:,} mails)", flush=True)
+    print(f"    mails.js  : {mails_size:.1f} MB ({nb:,} mails)", flush=True)
 
-    # === BODIES.JS — full body array, same index as D ===
+    # --- bodies.js: full body text, same index as D ---
     bodies_json = json.dumps(bodies, ensure_ascii=True, separators=(',', ':'))
     bodies_json = bodies_json.replace("<", "\\u003C")
 
@@ -70,9 +96,9 @@ def generate_output(mails, output_dir):
         f.write(";\n")
 
     bodies_size = os.path.getsize(bodies_js_path) / (1024 * 1024)
-    print(f"    bodies.js : {bodies_size:.1f} Mo", flush=True)
+    print(f"    bodies.js : {bodies_size:.1f} MB", flush=True)
 
-    # === DASHBOARD DATA (dans le HTML, pas dans le JSON) ===
+    # --- Dashboard stats (embedded in HTML, not in the JSON files) ---
     cat_stats = Counter(m["cat"] for m in mails)
     year_stats = Counter()
     sender_stats = Counter()
@@ -84,7 +110,7 @@ def generate_output(mails, output_dir):
     top_senders = sender_stats.most_common(8)
     years_sorted = sorted(year_stats.items(), reverse=True)
 
-    # Thread count
+    # Thread stats for the dashboard
     tid_count = Counter(m["tid"] for m in mails if m.get("tid"))
     threads_multi = sum(1 for c in tid_count.values() if c > 1)
 
@@ -124,7 +150,9 @@ def generate_output(mails, output_dir):
                      f'<span class="dsn">{snd_disp}</span>'
                      f'<span class="dsc">{cnt:,}</span></div>')
 
-    # === INDEX.HTML ===
+    # --- The big one: index.html ---
+    # This is a single-file SPA. Yes, it's a massive f-string. That's on purpose:
+    # one file = no broken links when users move the archive around.
     index_html = f'''<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -677,7 +705,7 @@ af();
         f.write(index_html)
 
     index_size = os.path.getsize(index_path) / (1024 * 1024)
-    print(f"    index.html: {index_size:.2f} Mo", flush=True)
+    print(f"    index.html: {index_size:.2f} MB", flush=True)
 
     total_size = mails_size + bodies_size + index_size
     return total_size, index_path

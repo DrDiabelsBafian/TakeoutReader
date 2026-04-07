@@ -1,0 +1,30 @@
+From garbage Mon Jan 01 00:00:00 2024
+Message-ID: <corrupt001@test>
+From: 
+Subject: 
+Date: not-a-real-date
+Content-Type: text/plain
+
+This email has broken headers.
+
+From duplicate@test.com Mon Jan 05 12:00:00 2024
+Message-ID: <dupe001@test.com>
+From: Dupe Sender <dupe@test.com>
+To: recipient@test.com
+Subject: First copy
+Date: Fri, 05 Jan 2024 12:00:00 +0100
+Content-Type: text/plain; charset="utf-8"
+
+This is the first copy.
+
+From duplicate@test.com Mon Jan 05 12:00:00 2024
+Message-ID: <dupe001@test.com>
+From: Dupe Sender <dupe@test.com>
+To: recipient@test.com
+Subject: First copy
+Date: Fri, 05 Jan 2024 12:00:00 +0100
+X-Gmail-Labels: Important
+Content-Type: text/plain; charset="utf-8"
+
+This is the duplicate - same Message-ID, different label.
+

@@ -1,19 +1,18 @@
-# ============================================
-# takeoutreader_gui.py -- GUI v9 (Dark Violet + Matrix Deco)
-# CustomTkinter | Dark + Violet/Teal accents
-# Python 3.14 compatible | Deps: customtkinter, Pillow
-# ============================================
-# V9 -- Audit fixes + visual polish
-#   + Cream text palette (#F5F0E8) instead of cold lavender
-#   + Colored dots (CTkFrame 12x12) in badges — always render in color
-#   + Accent bar height=40 (DPI-safe)
-#   + Hover propagated to all card children
-#   + Dead code cleanup
-#   + Reduced badge padding for 125% DPI safety
-#   + Logo from PNG file (no base64)
-# V8 -- Refonte compacte dark+violet, 3 surfaces, CTA 3D
-# V7 -- Dark+violet, watermarks, pitch encart
-# ============================================
+"""
+TakeoutReader GUI — CustomTkinter dark theme with violet/teal accents.
+
+Design: three-surface dark palette (#0F0E17 / #181627 / #201E30),
+3D CTA button with border glow, cream text (#F5F0E8).
+Logo loaded from PNG file (base64 embedding was tried and abandoned —
+it corrupted across sessions. File-based loading is the permanent fix).
+
+Changelog:
+    v9 — Cream text, colored badge dots, DPI-safe accent bar, hover fix
+    v8 — Compact dark+violet, 3-surface layout, 3D CTA button
+    v7 — Dark+violet, watermarks, pitch encart
+"""
+
+from __future__ import annotations
 
 import os
 import sys
@@ -33,9 +32,9 @@ from customtkinter import CTkImage
 from tkinter import filedialog
 from PIL import Image, ImageDraw
 
-# ============================================
-# BADGE ICON GENERATOR (Pillow, 16x16 RGBA)
-# ============================================
+# --- Badge icons (generated with Pillow, 16x16 RGBA) ---
+# We draw these at runtime instead of shipping icon files because
+# it's fewer files to distribute and they scale with DPI.
 def _make_lock_icon(color):
     """Draw a padlock icon."""
     img = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
@@ -104,9 +103,7 @@ def _make_envelope_icon(color):
     return img.resize((24, 24), Image.LANCZOS)
 
 
-# ============================================
-# PALETTE V9 - DARK VIOLET + CREAM TEXT
-# ============================================
+# --- PALETTE V9 - DARK VIOLET + CREAM TEXT ---
 # Surfaces
 BG_DEEP       = "#0F0E17"
 BG_CARD       = "#181627"
@@ -132,10 +129,8 @@ TEXT_LO       = "#7A7068"
 TEXT_SUCCESS  = "#5DCAA5"
 TEXT_ERROR    = "#E24B4A"
 
-# ============================================
 # TYPOGRAPHIE V9 - bumped +2px
 # 22 / 16 / 15 / 13 / 11
-# ============================================
 FONT_TITLE      = ("Segoe UI", 22, "bold")
 FONT_BTN        = ("Segoe UI", 16, "bold")
 FONT_CARD_TITLE = ("Segoe UI", 15, "bold")
@@ -151,30 +146,22 @@ FONT_FOOTER     = ("Segoe UI", 11)
 FONT_CREDIT     = ("Segoe UI", 9)
 FONT_LOG        = ("Consolas", 10)
 
-# ============================================
-# DIMENSIONS
-# ============================================
+# --- DIMENSIONS ---
 WIN_W = 640
 WIN_H = 540
 
-# ============================================
-# LOGO: fichier PNG a cote du script/exe
-# ============================================
+# --- LOGO: fichier PNG a cote du script/exe ---
 LOGO_FILE = "takeoutreader_logo.png"
 
 
-# ============================================
-# PATH RESOLUTION (Nuitka + Dev)
-# ============================================
+# --- PATH RESOLUTION (Nuitka + Dev) ---
 def get_base_dir():
     if getattr(sys, 'frozen', False):
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.abspath(__file__))
 
 
-# ============================================
-# QUEUE WRITER (redirect stdout/stderr)
-# ============================================
+# --- QUEUE WRITER (redirect stdout/stderr) ---
 class QueueWriter:
     def __init__(self, q, original):
         self._q = q
@@ -195,9 +182,7 @@ class QueueWriter:
             pass
 
 
-# ============================================
-# APPLICATION PRINCIPALE
-# ============================================
+# --- APPLICATION PRINCIPALE ---
 class TakeoutReaderApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -237,9 +222,7 @@ class TakeoutReaderApp(ctk.CTk):
         self._build_ui()
         self.after(100, self._poll_queue)
 
-    # ================================================
-    # BUILD UI
-    # ================================================
+    # --- BUILD UI ---
     def _build_ui(self):
         main = ctk.CTkFrame(self, fg_color=BG_DEEP)
         main.pack(fill="both", expand=True, padx=18, pady=14)
@@ -449,9 +432,7 @@ class TakeoutReaderApp(ctk.CTk):
             font=FONT_CREDIT, text_color=TEXT_LO
         ).pack(pady=(2, 0))
 
-    # ================================================
-    # CARD FACTORY
-    # ================================================
+    # --- CARD FACTORY ---
     def _make_card(self, parent, row, col, padx, icon_img,
                    title, desc):
         card = ctk.CTkFrame(
@@ -521,9 +502,7 @@ class TakeoutReaderApp(ctk.CTk):
         self._card_mbox.configure(border_color=BORDER_DIM, fg_color=BG_CARD)
         self._card_eml.configure(border_color=BORDER_DIM, fg_color=BG_CARD)
 
-    # ================================================
-    # FILE SELECTION
-    # ================================================
+    # --- FILE SELECTION ---
     def _select_mbox(self):
         paths = filedialog.askopenfilenames(
             title="Choisis tes fichiers .mbox ou .zip Takeout",
@@ -560,9 +539,7 @@ class TakeoutReaderApp(ctk.CTk):
                 text_color=TEXT_SUCCESS
             )
 
-    # ================================================
-    # CONVERSION
-    # ================================================
+    # --- CONVERSION ---
     def _start_conversion(self):
         if self._running:
             return
@@ -631,9 +608,7 @@ class TakeoutReaderApp(ctk.CTk):
     def _signal_done(self, ok):
         self._log_queue.put("__DONE_OK__" if ok else "__DONE_FAIL__")
 
-    # ================================================
-    # LOG POLLING + PROGRESS
-    # ================================================
+    # --- LOG POLLING + PROGRESS ---
     def _poll_queue(self):
         try:
             while True:
@@ -720,9 +695,7 @@ class TakeoutReaderApp(ctk.CTk):
         self._log.configure(state="disabled")
 
 
-# ============================================
-# ENTRY POINT
-# ============================================
+# --- ENTRY POINT ---
 if __name__ == "__main__":
     ctk.set_appearance_mode("dark")
     ctk.set_default_color_theme("blue")

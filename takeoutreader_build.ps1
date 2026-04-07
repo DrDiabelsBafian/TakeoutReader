@@ -1,16 +1,12 @@
-# ============================================
-# takeoutreader_build.ps1 v2
-# Build TakeoutReader .exe -- 2 modes :
-#   Mode A (defaut)  : PyInstaller --onedir  (rapide, 1-2 min)
-#   Mode B (recommande) : Nuitka --standalone  (plus lent, 5-15 min, meilleur resultat)
-#
-# Usage:
-#   powershell -ExecutionPolicy Bypass -File takeoutreader_build.ps1
-#   powershell -ExecutionPolicy Bypass -File takeoutreader_build.ps1 -Nuitka
-# ============================================
+"""
+takeoutreader_build.ps1 v3 — Build script for TakeoutReader v2.0.0
+Nuitka only (PyInstaller dropped — no bootloader for Python 3.14)
+
+Usage:
+  powershell -ExecutionPolicy Bypass -File takeoutreader_build.ps1
+"""
 
 param(
-    [switch]$Nuitka,
     [switch]$Help
 )
 
@@ -20,14 +16,14 @@ Set-Location $PSScriptRoot
 if ($Help) {
     Write-Host @"
 
-  TakeoutReader Build Script v2
-  ========================
-  Sans argument : build avec PyInstaller (rapide, ~1 min)
-  -Nuitka       : build avec Nuitka (recommande, ~5-15 min)
-                   + Startup plus rapide (3-5s vs 10-50s)
-                   + Moins de faux positifs antivirus
-                   + Code compile en C (non decompilable)
-  -Help         : ce message
+  TakeoutReader Build Script v3
+  =============================
+  Builds TakeoutReader using Nuitka (compiled to C).
+  Requires: Python 3.10+, MSVC Build Tools, Nuitka
+
+  Usage:
+    powershell -ExecutionPolicy Bypass -File takeoutreader_build.ps1
+    powershell -ExecutionPolicy Bypass -File takeoutreader_build.ps1 -Help
 
 "@
     exit 0
@@ -35,13 +31,11 @@ if ($Help) {
 
 Write-Host ""
 Write-Host ("=" * 60)
-Write-Host "  TakeoutReader - Build $(if ($Nuitka) {'Nuitka (compile C)'} else {'PyInstaller (bundle)'})"
+Write-Host "  TakeoutReader v2.0.0 - Nuitka Build"
 Write-Host ("=" * 60)
 Write-Host ""
 
-# -----------------------------------------------
-# 1. Verifier Python
-# -----------------------------------------------
+# --- 1. Check Python ---
 $pythonCmd = $null
 foreach ($cmd in @("python", "python3", "py")) {
     try {
@@ -57,197 +51,146 @@ foreach ($cmd in @("python", "python3", "py")) {
     } catch {}
 }
 if (-not $pythonCmd) {
-    Write-Host "  [ERREUR] Python 3.10+ introuvable."
-    Write-Host "  Installez Python depuis python.org (cocher 'Add to PATH')"
-    Read-Host "  Entree pour fermer"
+    Write-Host "  [ERROR] Python 3.10+ not found."
+    Write-Host "  Install Python from python.org (check 'Add to PATH')"
+    Read-Host "  Press Enter to close"
     exit 1
 }
 
-# -----------------------------------------------
-# 2. Verifier fichiers source
-# -----------------------------------------------
+# --- 2. Check source files ---
 $guiFile = Join-Path $PSScriptRoot "takeoutreader_gui.py"
-$coreFile = Join-Path $PSScriptRoot "takeoutreader_core.py"
+$pkgDir = Join-Path $PSScriptRoot "takeoutreader"
 $iconFile = Join-Path $PSScriptRoot "takeoutreader.ico"
+$logoFile = Join-Path $PSScriptRoot "takeoutreader_logo.png"
 
-foreach ($f in @($guiFile, $coreFile)) {
-    if (-not (Test-Path $f)) {
-        Write-Host "  [ERREUR] $(Split-Path $f -Leaf) introuvable"
-        Read-Host "  Entree pour fermer"
-        exit 1
-    }
+if (-not (Test-Path $guiFile)) {
+    Write-Host "  [ERROR] takeoutreader_gui.py not found"
+    Read-Host "  Press Enter to close"
+    exit 1
 }
-Write-Host "  [OK] Fichiers source trouves"
+if (-not (Test-Path $pkgDir)) {
+    Write-Host "  [ERROR] takeoutreader/ package not found"
+    Read-Host "  Press Enter to close"
+    exit 1
+}
+Write-Host "  [OK] Source files found"
 
 $hasIcon = Test-Path $iconFile
+if ($hasIcon) { Write-Host "  [OK] Icon: takeoutreader.ico" }
+$hasLogo = Test-Path $logoFile
+if ($hasLogo) { Write-Host "  [OK] Logo: takeoutreader_logo.png" }
+
+# --- 3. Install/check Nuitka ---
+Write-Host ""
+Write-Host "  Checking Nuitka..."
+& $pythonCmd -m pip install nuitka --quiet 2>&1 | Out-Host
+
+$nuitkaVer = & $pythonCmd -m nuitka --version 2>&1 | Select-Object -First 1
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "  [OK] Nuitka $nuitkaVer"
+} else {
+    Write-Host "  [ERROR] Nuitka not installed correctly"
+    Read-Host "  Press Enter to close"
+    exit 1
+}
+
+if ($pyMinor -ge 14) {
+    Write-Host ""
+    Write-Host "  [NOTE] Python 3.$pyMinor detected."
+    Write-Host "  If the build fails, try Python 3.12 or 3.13."
+    Write-Host ""
+}
+
+Write-Host "  [INFO] Nuitka requires a C compiler (MSVC Build Tools)."
+Write-Host "  -> https://visualstudio.microsoft.com/visual-cpp-build-tools/"
+Write-Host ""
+Write-Host "  Building... (5-15 minutes, be patient)"
+Write-Host ""
+
+# --- 4. Nuitka build ---
+$nuitkaArgs = @(
+    "-m", "nuitka"
+    "--standalone"
+    "--enable-plugin=tk-inter"
+    "--include-package=takeoutreader"
+    "--include-package=customtkinter"
+    "--output-dir=build_nuitka"
+    "--remove-output"
+    "--assume-yes-for-downloads"
+    "--company-name=TakeoutReader"
+    "--product-name=TakeoutReader"
+    "--product-version=2.0.0"
+    "--file-description=TakeoutReader - Gmail Takeout to offline HTML archive"
+    "--windows-console-mode=disable"
+)
+
 if ($hasIcon) {
-    Write-Host "  [OK] Icone : takeoutreader.ico"
-} else {
-    Write-Host "  [INFO] Pas d'icone (takeoutreader.ico) - build sans icone"
+    $nuitkaArgs += "--windows-icon-from-ico=`"$iconFile`""
 }
 
-# -----------------------------------------------
-# 3. Build
-# -----------------------------------------------
-if ($Nuitka) {
-    # ===== MODE NUITKA =====
+$nuitkaArgs += "`"$guiFile`""
+
+& $pythonCmd @nuitkaArgs
+
+if ($LASTEXITCODE -ne 0) {
     Write-Host ""
-    Write-Host "  Installation/verification de Nuitka..."
-    & $pythonCmd -m pip install nuitka --quiet 2>&1 | Out-Host
-
-    # Verifier que Nuitka fonctionne
-    $nuitkaVer = & $pythonCmd -m nuitka --version 2>&1 | Select-Object -First 1
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "  [OK] Nuitka $nuitkaVer"
-    } else {
-        Write-Host "  [ERREUR] Nuitka non installe correctement"
-        Read-Host "  Entree pour fermer"
-        exit 1
-    }
-
-    # Warning Python 3.14
-    if ($pyMinor -ge 14) {
-        Write-Host ""
-        Write-Host "  [ATTENTION] Python 3.$pyMinor detecte."
-        Write-Host "  Nuitka peut ne pas encore supporter cette version."
-        Write-Host "  Si le build echoue, utilisez PyInstaller (sans -Nuitka)."
-        Write-Host "  Ou installez Python 3.12/3.13 pour le build uniquement."
-        Write-Host ""
-    }
-
-    # Verifier C compiler (Windows = MSVC via Visual Studio Build Tools)
-    Write-Host "  [INFO] Nuitka necessite un compilateur C."
-    Write-Host "  Si le build echoue, installez :"
-    Write-Host "  -> Visual Studio Build Tools (gratuit)"
-    Write-Host "  -> https://visualstudio.microsoft.com/visual-cpp-build-tools/"
-    Write-Host ""
-
-    Write-Host "  Build Nuitka en cours... (5-15 minutes, soyez patient)"
-    Write-Host ""
-
-    $nuitkaArgs = @(
-        "-m", "nuitka"
-        "--standalone"
-        "--enable-plugin=tk-inter"
-        "--include-package=takeoutreader"
-        "--output-dir=build_nuitka"
-        "--remove-output"
-        "--assume-yes-for-downloads"
-        "--company-name=TakeoutReader"
-        "--product-name=TakeoutReader"
-        "--product-version=1.0.0"
-        "--file-description=TakeoutReader - Gmail Archive Viewer"
-    )
-
-    if ($hasIcon) {
-        $nuitkaArgs += "--windows-icon-from-ico=`"$iconFile`""
-    }
-
-    # --windows-console-mode=disable : pas de console en arriere-plan
-    $nuitkaArgs += "--windows-console-mode=disable"
-    $nuitkaArgs += "`"$guiFile`""
-
-    & $pythonCmd @nuitkaArgs
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host ""
-        Write-Host "  [ERREUR] Build Nuitka echoue."
-        Write-Host "  Verifiez qu'un compilateur C est installe (MSVC Build Tools)"
-        Read-Host "  Entree pour fermer"
-        exit 1
-    }
-
-    # Renommer le dossier de sortie pour Inno Setup
-    $nuitkaDist = Join-Path $PSScriptRoot "build_nuitka\takeoutreader_gui.dist"
-    $distDir = Join-Path $PSScriptRoot "dist\TakeoutReader"
-
-    if (Test-Path $distDir) {
-        Remove-Item $distDir -Recurse -Force
-    }
-    New-Item -Path (Join-Path $PSScriptRoot "dist") -ItemType Directory -Force | Out-Null
-    Move-Item $nuitkaDist $distDir -Force
-
-    # Renommer le binaire
-    $binName = if (Test-Path "$distDir\takeoutreader_gui.exe") { "takeoutreader_gui.exe" } else { "takeoutreader_gui.bin" }
-    if (Test-Path "$distDir\$binName") {
-        Rename-Item "$distDir\$binName" "TakeoutReader.exe" -Force
-    }
-
-    $exePath = Join-Path $distDir "TakeoutReader.exe"
-
-} else {
-    # ===== MODE PYINSTALLER (--onedir) =====
-    Write-Host "  Verification de PyInstaller..."
-    $hasPyInst = $false
-    $pyiCheck = & $pythonCmd -m PyInstaller --version 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        $hasPyInst = $true
-        Write-Host "  [OK] PyInstaller installe"
-    }
-
-    if (-not $hasPyInst) {
-        Write-Host "  Installation de PyInstaller..."
-        & $pythonCmd -m pip install pyinstaller --quiet 2>&1 | Out-Host
-        Write-Host "  [OK] PyInstaller installe"
-    }
-
-    Write-Host ""
-    Write-Host "  Build PyInstaller en cours... (1-2 minutes)"
-    Write-Host ""
-
-    # --onedir (PAS --onefile) : startup 3-5s au lieu de 10-50s
-    $pyiArgs = @(
-        "-m", "PyInstaller"
-        "--onedir"
-        "--windowed"
-        "--name", "TakeoutReader"
-        "--add-data", "`"$coreFile;.`""
-        "--clean"
-        "--noconfirm"
-    )
-    if ($hasIcon) {
-        $pyiArgs += "--icon=`"$iconFile`""
-    }
-    $pyiArgs += "`"$guiFile`""
-
-    & $pythonCmd @pyiArgs
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host ""
-        Write-Host "  [ERREUR] Build PyInstaller echoue."
-        Read-Host "  Entree pour fermer"
-        exit 1
-    }
-
-    $exePath = Join-Path $PSScriptRoot "dist\TakeoutReader\TakeoutReader.exe"
+    Write-Host "  [ERROR] Nuitka build failed."
+    Write-Host "  Check that MSVC Build Tools are installed."
+    Read-Host "  Press Enter to close"
+    exit 1
 }
 
-# -----------------------------------------------
-# 4. Resultat
-# -----------------------------------------------
+# --- 5. Assemble dist folder ---
+$nuitkaDist = Join-Path $PSScriptRoot "build_nuitka\takeoutreader_gui.dist"
+$distDir = Join-Path $PSScriptRoot "dist\TakeoutReader"
+
+if (Test-Path $distDir) {
+    Remove-Item $distDir -Recurse -Force
+}
+New-Item -Path (Join-Path $PSScriptRoot "dist") -ItemType Directory -Force | Out-Null
+Move-Item $nuitkaDist $distDir -Force
+
+# Rename binary
+$binName = if (Test-Path "$distDir\takeoutreader_gui.exe") { "takeoutreader_gui.exe" } else { "takeoutreader_gui.bin" }
+if (Test-Path "$distDir\$binName") {
+    Rename-Item "$distDir\$binName" "TakeoutReader.exe" -Force
+}
+
+# Copy logo (file-based loader needs it next to the exe)
+if ($hasLogo) {
+    Copy-Item $logoFile $distDir -Force
+    Write-Host "  [OK] Logo copied to dist"
+}
+
+# Copy icon
+if ($hasIcon) {
+    Copy-Item $iconFile $distDir -Force
+}
+
+$exePath = Join-Path $distDir "TakeoutReader.exe"
+
+# --- 6. Summary ---
 if (Test-Path $exePath) {
-    $distFolder = Split-Path $exePath -Parent
-    $totalSize = [math]::Round((Get-ChildItem $distFolder -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB, 1)
+    $totalSize = [math]::Round((Get-ChildItem $distDir -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB, 1)
     $exeSize = [math]::Round((Get-Item $exePath).Length / 1MB, 1)
-    $fileCount = (Get-ChildItem $distFolder -Recurse -File).Count
+    $fileCount = (Get-ChildItem $distDir -Recurse -File).Count
 
     Write-Host ""
     Write-Host ("=" * 60)
     Write-Host "  BUILD OK"
     Write-Host ("=" * 60)
-    Write-Host "  Methode     : $(if ($Nuitka) {'Nuitka (compile C)'} else {'PyInstaller (bundle)'})"
     Write-Host "  Executable  : $exePath"
-    Write-Host "  Binaire     : $exeSize Mo"
-    Write-Host "  Dossier     : $totalSize Mo ($fileCount fichiers)"
+    Write-Host "  Binary      : $exeSize MB"
+    Write-Host "  Folder      : $totalSize MB ($fileCount files)"
     Write-Host ""
-    Write-Host "  Prochaine etape :"
-    Write-Host "  1. Tester : double-clic sur $exePath"
-    Write-Host "  2. Installeur : ouvrir TakeoutReader_Installer.iss dans Inno Setup"
-    Write-Host "  3. Compiler : Ctrl+F9 dans Inno Setup"
+    Write-Host "  Next steps:"
+    Write-Host "  1. Test: double-click $exePath"
+    Write-Host "  2. Installer: open TakeoutReader_Installer.iss in Inno Setup"
+    Write-Host "  3. Compile: Ctrl+F9 in Inno Setup"
     Write-Host ("=" * 60)
 } else {
-    Write-Host "  [ERREUR] TakeoutReader.exe introuvable apres build"
+    Write-Host "  [ERROR] TakeoutReader.exe not found after build"
 }
 
 Write-Host ""
-Read-Host "  Entree pour fermer"
+Read-Host "  Press Enter to close"

@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "takeoutreader"
+version = "2.0.0"
+description = "Convert Gmail Takeout .mbox exports into fast, searchable, offline HTML archives"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Dr. Diabels Bafian", email = "drdiabelsbafian@gmail.com"},
+]
+keywords = ["gmail", "takeout", "mbox", "email", "archive", "offline", "privacy"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Environment :: X11 Applications",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Communications :: Email",
+    "Topic :: System :: Archiving",
+]
+
+dependencies = [
+    "customtkinter>=5.2.0",
+    "Pillow>=10.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.4",
+]
+
+[project.urls]
+Homepage = "https://github.com/DrDiabelsBafian/TakeoutReader"
+Repository = "https://github.com/DrDiabelsBafian/TakeoutReader"
+Issues = "https://github.com/DrDiabelsBafian/TakeoutReader/issues"
+Changelog = "https://github.com/DrDiabelsBafian/TakeoutReader/blob/main/CHANGELOG.md"
+
+[project.scripts]
+takeoutreader = "takeoutreader.__main__:main"
+
+[project.gui-scripts]
+takeoutreader-gui = "takeoutreader.gui.app:main"
+
+[tool.setuptools.packages.find]
+include = ["takeoutreader*"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

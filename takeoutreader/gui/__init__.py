@@ -1,1 +1,1 @@
-# takeoutreader/gui/__init__.py
+# CustomTkinter GUI — can be replaced without touching the core.

@@ -1,0 +1,33 @@
+From sender@example.com Mon Jan 01 12:00:00 2024
+Message-ID: <test001@example.com>
+From: Alice <alice@example.com>
+To: Bob <bob@example.com>
+Subject: Hello Bob
+Date: Mon, 01 Jan 2024 12:00:00 +0100
+X-Gmail-Labels: Inbox,Important
+Content-Type: text/plain; charset="utf-8"
+
+Hey Bob, happy new year!
+
+From noreply@facebook.com Mon Jan 02 08:00:00 2024
+Message-ID: <test002@facebook.com>
+From: Facebook <noreply@facebookmail.com>
+To: user@example.com
+Subject: You have a new friend request
+Date: Tue, 02 Jan 2024 08:00:00 +0100
+X-Gmail-Labels: Social
+Content-Type: text/plain; charset="utf-8"
+
+Someone wants to be your friend.
+
+From bank@boursorama.com Mon Jan 03 10:00:00 2024
+Message-ID: <test003@boursorama.com>
+From: Boursorama <alert@boursorama.com>
+To: client@example.com
+Subject: Votre releve de compte
+Date: Wed, 03 Jan 2024 10:00:00 +0100
+X-Gmail-Labels: Inbox
+Content-Type: text/plain; charset="utf-8"
+
+Votre releve est disponible.
+

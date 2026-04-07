@@ -1,18 +1,28 @@
-# ============================================
-# takeoutreader/core/constants.py
-# Configuration globale TakeoutReader
-# ============================================
+"""
+Global configuration for TakeoutReader.
 
-BODY_MAX_CHARS = 0            # 0 = pas de troncature body (bodies.js separe)
-SNIPPET_CHARS = 150           # Snippet dans la liste + mails.js
-MIN_PJ_SIZE = 1024            # Ignore PJ < 1 Ko (pixels tracking)
+Thresholds, MIME maps, category keywords, and validation invariants.
+Tweak these if you're adapting the tool for a different locale or email provider.
+"""
 
-# MIME types a ignorer lors de l'extraction PJ
-SKIP_MIME = {"text/plain", "text/html", "multipart/alternative", "multipart/mixed",
-             "multipart/related", "multipart/signed", "multipart/report",
-             "message/delivery-status", "message/rfc822"}
+from __future__ import annotations
 
-# Extension map pour PJ sans nom
+# --- Parsing thresholds ---
+
+BODY_MAX_CHARS = 0       # 0 = no truncation (bodies live in a separate .js file anyway)
+SNIPPET_CHARS = 150      # preview text shown in the mail list
+MIN_PJ_SIZE = 1024       # skip attachments < 1 KB (tracking pixels, spacer gifs)
+
+# MIME types that are part of the message structure, not real attachments
+SKIP_MIME = {
+    "text/plain", "text/html",
+    "multipart/alternative", "multipart/mixed", "multipart/related",
+    "multipart/signed", "multipart/report",
+    "message/delivery-status", "message/rfc822",
+}
+
+# Fallback extensions when an attachment has no filename
+# (surprisingly common with older Android email clients)
 EXT_MAP = {
     "image/jpeg": ".jpg", "image/png": ".png", "image/gif": ".gif",
     "image/webp": ".webp", "application/pdf": ".pdf",
@@ -26,90 +36,107 @@ EXT_MAP = {
     "audio/mpeg": ".mp3", "audio/ogg": ".ogg",
 }
 
-# Mots-cles par categorie — on check dans From + Subject
-CAT_SOCIAL = {"facebook", "facebookmail", "linkedin", "twitter", "x.com",
-              "instagram", "threads.net", "tiktok",
-              "snapchat", "pinterest", "reddit", "discord", "whatsapp",
-              "telegram", "meetup", "nextdoor", "strava",
-              "mastodon", "bluesky", "bsky"}
+# --- Smart categories ---
+# Keyword-based heuristics checked against From + Subject.
+# Not ML, but works well for the 90% case (social networks, banks, shops).
+# TODO: make this configurable via a user-facing JSON file
 
-CAT_BANQUE = {"banque", "credit", "caisse", "assurance", "mutuelle", "impot",
-              "tresor", "boursorama", "fortuneo", "ing direct", "societe generale",
-              "bnp", "lcl", "bred", "cic", "hsbc", "la banque postale",
-              "paypal", "stripe", "revolut", "n26", "wise", "sofinco",
-              "cetelem", "cofidis", "franfinance", "floa", "younited"}
+CAT_SOCIAL = {
+    "facebook", "facebookmail", "linkedin", "twitter", "x.com",
+    "instagram", "threads.net", "tiktok",
+    "snapchat", "pinterest", "reddit", "discord", "whatsapp",
+    "telegram", "meetup", "nextdoor", "strava",
+    "mastodon", "bluesky", "bsky",
+}
 
-CAT_ACHATS = {"amazon", "cdiscount", "fnac", "vinted", "leboncoin", "aliexpress",
-              "ebay", "wish", "shein", "zalando", "asos", "boulanger", "darty",
-              "order", "commande", "livraison", "colis", "facture", "invoice",
-              "receipt", "shipped", "tracking", "expedition",
-              "uber eats", "deliveroo", "just eat", "paack", "chronopost",
-              "colissimo", "dpd", "ups", "fedex", "mondial relay", "relais colis",
-              "gls", "tnt", "dhl", "laposte", "suivi"}
+CAT_BANQUE = {
+    "banque", "credit", "caisse", "assurance", "mutuelle", "impot",
+    "tresor", "boursorama", "fortuneo", "ing direct", "societe generale",
+    "bnp", "lcl", "bred", "cic", "hsbc", "la banque postale",
+    "paypal", "stripe", "revolut", "n26", "wise", "sofinco",
+    "cetelem", "cofidis", "franfinance", "floa", "younited",
+}
 
-CAT_NOTIF = {"noreply", "no-reply", "no_reply", "donotreply",
-             "ne-pas-repondre", "nepasrepondre", "automated",
-             "mailer-daemon", "postmaster", "system@", "alert@",
-             "notification@", "notifications@", "notify@"}
+CAT_ACHATS = {
+    "amazon", "cdiscount", "fnac", "vinted", "leboncoin", "aliexpress",
+    "ebay", "wish", "shein", "zalando", "asos", "boulanger", "darty",
+    "order", "commande", "livraison", "colis", "facture", "invoice",
+    "receipt", "shipped", "tracking", "expedition",
+    "uber eats", "deliveroo", "just eat", "paack", "chronopost",
+    "colissimo", "dpd", "ups", "fedex", "mondial relay", "relais colis",
+    "gls", "tnt", "dhl", "laposte", "suivi",
+}
 
-CAT_NEWSLETTER = {"newsletter", "digest", "weekly", "hebdo", "info@",
-                  "news@", "bulletin", "unsubscribe", "marketing@",
-                  "promo@", "campaign", "mailchimp", "sendinblue",
-                  "brevo", "mailjet", "substack"}
+CAT_NOTIF = {
+    "noreply", "no-reply", "no_reply", "donotreply",
+    "ne-pas-repondre", "nepasrepondre", "automated",
+    "mailer-daemon", "postmaster", "system@", "alert@",
+    "notification@", "notifications@", "notify@",
+}
 
-# Features qui DOIVENT exister dans index.html (validation rebouclage)
-MUST_EXIST_HTML = {
-    # V1 -- Core
-    "function af()": "Filtre principal",
-    "function rl()": "Render liste",
-    "function sm(": "Affichage mail",
-    # V2 -- Avatars + Theme
-    "avH(": "Avatars couleur",
-    "body.light": "Theme clair",
-    # V3 -- Categories + Command palette
-    "openPalette": "Command palette Ctrl+K",
-    "catC[": "Couleurs categories",
-    "closePalette": "Fermeture palette",
-    # V4 -- Archi split
-    "mails.js": "Chargement mails.js",
-    "bodies.js": "Chargement bodies.js",
-    # V5 -- Threads
+CAT_NEWSLETTER = {
+    "newsletter", "digest", "weekly", "hebdo", "info@",
+    "news@", "bulletin", "unsubscribe", "marketing@",
+    "promo@", "campaign", "mailchimp", "sendinblue",
+    "brevo", "mailjet", "substack",
+}
+
+# --- Validation invariants ---
+# Used by validator.py to check that the generated HTML is complete.
+# Each key is a string that MUST appear in index.html; value is a human description.
+
+MUST_EXIST_HTML: dict[str, str] = {
+    # Core rendering
+    "function af()": "Main filter function",
+    "function rl()": "Render mail list",
+    "function sm(": "Show single mail",
+    # Avatars + theme
+    "avH(": "Color avatar helper",
+    "body.light": "Light theme class",
+    # Categories + command palette
+    "openPalette": "Command palette (Ctrl+K)",
+    "catC[": "Category color map",
+    "closePalette": "Close palette handler",
+    # Split architecture (external JS)
+    "mails.js": "External mail data file",
+    "bodies.js": "External body data file",
+    # Threading
     "tgTm": "Toggle thread message",
     "thLen(": "Thread length helper",
-    "TH[": "Thread map",
-    # V6 -- Stats modal
-    "openStats": "Ouverture modal stats",
-    "closeStats": "Fermeture modal stats",
-    "dash-ov": "Overlay modal stats",
-    # V7 -- Selection + Export
+    "TH[": "Thread index map",
+    # Stats modal
+    "openStats": "Open stats modal",
+    "closeStats": "Close stats modal",
+    "dash-ov": "Stats modal overlay",
+    # Selection + export
     "tgSel": "Toggle selection",
-    "exportSel": "Export selection HTML",
-    "selPage": "Selection page",
-    "selAll": "Selection tous",
-    "hideSelected": "Masquer selection",
-    "restoreHidden": "Restaurer masques",
-    # V8 -- Spam/Sent/Trash + Perf
-    "dF": "Filtre direction (boite)",
-    "m.spam": "Flag spam",
-    "m.trash": "Flag corbeille",
-    "m.sent": "Flag envoye",
-    "_di": "Pre-index perf",
-    # V12 -- Violet/Rose palette + icons + animations
-    "#B388FF": "Accent violet dark",
-    "#E91E63": "Accent rose light",
-    "fadeUp": "Animation fadeUp",
-    "--glow": "Glow variable",
+    "exportSel": "Export selection as HTML",
+    "selPage": "Select current page",
+    "selAll": "Select all",
+    "hideSelected": "Hide selected mails",
+    "restoreHidden": "Restore hidden mails",
+    # Mailbox filters (inbox/sent/spam/trash)
+    "dF": "Direction filter",
+    "m.spam": "Spam flag",
+    "m.trash": "Trash flag",
+    "m.sent": "Sent flag",
+    "_di": "Pre-computed search index",
+    # Visual identity
+    "#B388FF": "Violet accent (dark mode)",
+    "#E91E63": "Pink accent (light mode)",
+    "fadeUp": "fadeUp animation",
+    "--glow": "Glow CSS variable",
     "sbw": "Search icon wrapper",
 }
 
-# Champs obligatoires dans mails.js
+# Required fields in each mail object inside mails.js
 MUST_EXIST_FIELDS = ("ds", "d", "f", "s", "cat", "tid", "sn", "spam", "trash", "sent")
 
-# Patterns qui ne doivent PLUS exister (regressions connues)
-MUST_NOT_EXIST = {
-    "goBrowse": "V6 regression: dashboard bloquant",
-    "goDash": "V6 regression: dashboard bloquant",
-    "viewMode": "V6 regression: mode dashboard",
-    "dash-go": "V6 regression: bouton Explorer",
-    "D.indexOf": "V8 regression: perf O(n)",
+# Patterns that should NOT appear (known regressions from earlier versions)
+MUST_NOT_EXIST: dict[str, str] = {
+    "goBrowse": "v6 regression: blocking dashboard",
+    "goDash": "v6 regression: blocking dashboard",
+    "viewMode": "v6 regression: dashboard mode",
+    "dash-go": "v6 regression: Explore button",
+    "D.indexOf": "v8 regression: O(n) search",
 }

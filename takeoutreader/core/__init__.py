@@ -1,1 +1,1 @@
-# takeoutreader/core/__init__.py
+# Core processing pipeline — no GUI dependencies here.
