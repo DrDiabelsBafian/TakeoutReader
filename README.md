@@ -1,5 +1,10 @@
 # TakeoutReader
 
+![Version](https://img.shields.io/github/v/release/DrDiabelsBafian/TakeoutReader?style=flat-square)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=flat-square)
+![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?style=flat-square)
+
 **Convert your Gmail Takeout exports into a fast, searchable, offline HTML archive.**
 
 Zero server. Zero cloud. Zero telemetry. Your emails stay 100% on your machine.
@@ -29,15 +34,15 @@ TakeoutReader converts your `.mbox` (or `.zip` or `.eml` folder) into a **standa
 
 | Dataset | Time | Output |
 |---|---|---|
-| 50 emails | ~44s | 0.3 MB |
-| 4,741 emails | ~2 min | 19 MB |
-| 19,000+ emails | ~16 min | ~47 MB |
+| 50 emails | ~44s | 0.3 Mo |
+| 4,741 emails | ~2 min | 19 Mo |
+| 19,000+ emails | ~16 min | ~47 Mo |
 
 ---
 
 ## Download
 
-> **[Download the latest release](https://github.com/DrDiabelsBafian/TakeoutReader/releases/latest)**
+> **[Download TakeoutReader_Setup_3.0.0.exe](https://github.com/DrDiabelsBafian/TakeoutReader/releases/latest)**
 
 Windows 10/11. No Python required. No admin rights needed.
 
@@ -71,10 +76,10 @@ Your emails are yours. Period.
 
 ```
 takeoutreader/
-    __init__.py          # Package metadata + version
+    __init__.py          # Package metadata
     __main__.py          # CLI entry point
     core/
-        constants.py     # Configuration, MIME maps, category keywords
+        constants.py     # Configuration, MIME maps, categories
         sanitizer.py     # Text cleaning, MIME header decoding
         detection.py     # Auto-detect .mbox/.eml/.zip sources
         parser.py        # Parse mbox/eml, dedup, threading
@@ -83,11 +88,6 @@ takeoutreader/
         validator.py     # Post-generation quality checks
     gui/
         app.py           # CustomTkinter GUI
-tests/
-    fixtures/            # Small .mbox samples for testing
-    test_parser.py
-    test_extractor.py
-    test_sanitizer.py
 ```
 
 Each module has a single responsibility. The core runs independently of the GUI — you can use it as a library:
@@ -101,33 +101,26 @@ print(f"{len(mails)} emails parsed")
 
 ---
 
-## Install from source
+## Build from source
 
-**Requirements:** Python 3.10+
+**Requirements:** Python 3.10+, CustomTkinter, Pillow
 
 ```bash
 # Clone
 git clone https://github.com/DrDiabelsBafian/TakeoutReader.git
 cd TakeoutReader
 
-# Install (editable, with dev dependencies)
-pip install -e ".[dev]"
+# Install dependencies
+pip install customtkinter Pillow
 
 # Run GUI
-takeoutreader-gui
+python takeoutreader_gui.py
 
-# Run CLI
-takeoutreader my_export.mbox
-# or
+# Or run CLI
 python -m takeoutreader my_export.mbox
 
-# Run tests
-pytest
-
-# Build executable (Nuitka)
-python -m nuitka --standalone --enable-plugin=tk-inter \
-    --include-package=takeoutreader --include-package=customtkinter \
-    --windows-console-mode=disable takeoutreader_gui.py
+# Build executable (Nuitka, recommended)
+python -m nuitka --standalone --enable-plugin=tk-inter --include-package=takeoutreader --include-package=customtkinter --windows-console-mode=disable takeoutreader_gui.py
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed build instructions.
@@ -136,14 +129,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed build instructions.
 
 ## Tech Stack
 
-- **Python 3.10+** — core parsing uses stdlib only (no external dependencies)
-- **CustomTkinter** — modern cross-platform GUI
+- **Python 3.14** — zero external dependency for core parsing (stdlib only)
+- **CustomTkinter** — modern GUI framework
 - **Nuitka** — compiled to C, no Python needed at runtime
-- **Inno Setup** — Windows installer
+- **Inno Setup** — professional Windows installer
 
 ---
 
-## Comparison
+## Competitive Advantage
 
 | Feature | TakeoutReader | RecoveryTools | 4n6 | BitRecover |
 |---|---|---|---|---|
@@ -156,32 +149,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed build instructions.
 
 ---
 
-## How this was built
-
-I'm not a software engineer — I'm a workflow architect who needed a tool that didn't exist. TakeoutReader was built with significant AI assistance (Claude by Anthropic) for code generation, while I handled the product vision, UX decisions, and testing against real-world Gmail exports (19,000+ emails across 15 years).
-
-The architecture decisions are mine. The code is AI-generated and human-audited. If you spot something that could be improved, PRs are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
-
----
-
-## Known Limitations
-
-- Output is in French (English localization planned)
-- Categories are keyword-based, not ML — works well for common senders, less so for niche ones
-- Very large attachments (>50 MB) may slow down extraction
-- No incremental updates — re-run processes the full export each time
-
----
-
 ## License
 
 [MIT](LICENSE.txt) — Use it, fork it, ship it.
-
----
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 

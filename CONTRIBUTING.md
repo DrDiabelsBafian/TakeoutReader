@@ -1,124 +1,63 @@
-# CONTRIBUTING — TakeoutReader Build Guide
+# Contributing to TakeoutReader
 
-## Architecture
+Thanks for your interest in contributing! TakeoutReader is an open-source project and contributions are welcome.
+
+## How to contribute
+
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes (`git commit -m "Add: my feature"`)
+4. Push to your branch (`git push origin feature/my-feature`)
+5. Open a Pull Request
+
+## Commit conventions
+
+Prefix your commits for clarity:
+
+- `Add:` — new feature or file
+- `Fix:` — bug fix
+- `Refactor:` — code restructuring (no behavior change)
+- `Docs:` — documentation only
+- `Test:` — adding or updating tests
+
+## Code style
+
+- **Python**: Google-style docstrings, type hints on public function signatures
+- **ASCII only** in strings and comments (no accented characters in code)
+- Run `pytest` before submitting
+
+## Reporting bugs
+
+Open a [GitHub Issue](https://github.com/DrDiabelsBafian/TakeoutReader/issues) with:
+
+- Steps to reproduce
+- Expected vs actual behavior
+- Your OS and Python version
+- The input format you used (.mbox, .zip, or .eml folder)
+
+## Feature requests
+
+Open an issue with the `enhancement` label. Describe what you'd like and why it would be useful.
+
+## Project structure
 
 ```
-TakeoutReader/
-  takeoutreader_gui.py          <- GUI tkinter v2 (entry point)
-  takeoutreader_core.py         <- V16 engine (ex SCRIPT_Mbox-to-HTML, rebrand TakeoutReader)
-  takeoutreader_build.ps1       <- Build script (PyInstaller + Nuitka)
-  TakeoutReader_Installer.iss   <- Inno Setup installer script
-  LICENSE.txt               <- MIT license + privacy notice
-  README.md                 <- User-facing GitHub README
-  CONTRIBUTING.md           <- This file
-  takeoutreader.ico             <- Icon (optional, 256x256)
+takeoutreader/
+    __main__.py          # CLI entry point
+    core/
+        constants.py     # Configuration, MIME maps, categories
+        sanitizer.py     # Text cleaning, MIME header decoding
+        detection.py     # Auto-detect .mbox/.eml/.zip sources
+        parser.py        # Parse mbox/eml, dedup, threading
+        extractor.py     # Attachment extraction to disk
+        renderer.py      # HTML/JS output generation
+        validator.py     # Post-generation quality checks
+    gui/
+        app.py           # CustomTkinter GUI
 ```
 
-## Prerequisites (build machine only)
+Each module has a single responsibility. Keep it that way.
 
-| Tool | Version | Install |
-|------|---------|---------|
-| Python | 3.10+ | python.org (check "Add to PATH") |
-| PyInstaller | latest | auto-installed by build script |
-| **or** Nuitka | latest | auto-installed by build script |
-| Inno Setup | 6.x | https://jrsoftware.org/isdl.php (free) |
+## License
 
-For Nuitka builds, you also need a C compiler:
-- **Visual Studio Build Tools** (free): https://visualstudio.microsoft.com/visual-cpp-build-tools/
-- Select "Desktop development with C++" workload
-
-**End users don't need any of this.** Everything is bundled in the installer.
-
-## Step 1 — Prepare files
-
-1. Create a folder `TakeoutReader/`
-2. Copy all files from this repo
-3. All files are ready — `takeoutreader_core.py` is already V16 (rebrand from SCRIPT_Mbox-to-HTML)
-
-## Step 2 — Build the .exe
-
-### Option A: Nuitka (recommended)
-
-```powershell
-cd C:\path\to\TakeoutReader
-powershell -ExecutionPolicy Bypass -File takeoutreader_build.ps1 -Nuitka
-```
-
-**Why Nuitka:**
-- Compiles Python to native C -> 3-5s startup (vs 10-50s with PyInstaller --onefile)
-- Fewer antivirus false positives (no interpreter extraction at runtime)
-- Non-decompilable binary (IP protection)
-- Build time: 5-15 minutes (one-time cost)
-
-Output: `dist\TakeoutReader\` folder with `TakeoutReader.exe` + dependencies.
-
-### Option B: PyInstaller (faster build)
-
-```powershell
-cd C:\path\to\TakeoutReader
-powershell -ExecutionPolicy Bypass -File takeoutreader_build.ps1
-```
-
-**Why PyInstaller:**
-- Simple, no C compiler needed
-- Build time: 1-2 minutes
-- Uses --onedir mode (NOT --onefile) for fast startup
-
-Output: `dist\TakeoutReader\` folder with `TakeoutReader.exe` + dependencies.
-
-### Test the build
-
-Before creating the installer:
-1. Double-click `dist\TakeoutReader\TakeoutReader.exe`
-2. Select a .mbox file or .eml folder
-3. Run the conversion
-4. Verify the HTML archive opens correctly
-
-## Step 3 — Create the installer (Inno Setup)
-
-1. Install Inno Setup from https://jrsoftware.org/isdl.php
-2. Open `TakeoutReader_Installer.iss` in Inno Setup Compiler
-3. Build > Compile (Ctrl+F9)
-4. Output: `installer_output\TakeoutReader_Setup_1.0.0.exe`
-
-The installer packages the entire `dist\TakeoutReader\` folder and provides:
-- Language selection (French / English)
-- License agreement screen (MIT + privacy)
-- Install folder selection (no admin rights needed)
-- Desktop + Start Menu shortcuts
-- Clean uninstaller in Add/Remove Programs
-- "Launch TakeoutReader" option after install
-
-## Step 4 — Distribute
-
-Upload `TakeoutReader_Setup_1.0.0.exe` to GitHub Releases:
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-# Then upload the installer .exe to the GitHub Release
-```
-
-## Troubleshooting
-
-| Problem | Cause | Fix |
-|---------|-------|-----|
-| Nuitka: "no C compiler" | MSVC not installed | Install Visual Studio Build Tools |
-| PyInstaller: slow startup | Using --onefile | This script uses --onedir (fast) |
-| Antivirus blocks .exe | False positive | Use Nuitka build, or add exception |
-| ModuleNotFoundError | takeoutreader_core.py missing | Must be next to takeoutreader_gui.py |
-| .exe starts, blank window | Import error | Run from CMD to see errors |
-| Inno Setup: file not found | Build not done | Run build script first |
-
-## Icon (optional)
-
-1. Create a 256x256 PNG image
-2. Convert to .ico (https://convertio.co/png-ico/)
-3. Name it `takeoutreader.ico`, place in the TakeoutReader/ folder
-4. Rebuild — the script auto-detects it
-
-## Code signing (optional, ~$70/year)
-
-A code signing certificate eliminates SmartScreen warnings entirely.
-Cheapest option: Certum Open Source Code Signing certificate.
-Apply at: https://shop.certum.eu/open-source-code-signing-certificate.html
+By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE.txt).
