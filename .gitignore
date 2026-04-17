@@ -34,3 +34,9 @@ DIAG_*.log
 .pytest_cache/
 htmlcov/
 .coverage
+
+DIAG_*.log
+Arborescence_*.ps1
+bug_report.md
+feature_request.md
+installer_output/
